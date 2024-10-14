@@ -1,13 +1,18 @@
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+const scoreDisplay = document.getElementById('score');
 
-const box = 20;
-let snake = [{ x: 9 * box, y: 10 * box }];
+let box = 20;
+let snake = [{ x: 7 * box, y: 7 * box }];
 let direction = "";
-let food = {
-    x: Math.floor(Math.random() * 20) * box,
-    y: Math.floor(Math.random() * 20) * box,
-};
+let food = generateFood();
+let score = 0;
+let highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
+let level = 1;
+let targetScore = 10;
+let speed = 90; // Set initial speed to 90 ms
+let game;
 
 document.addEventListener('keydown', changeDirection);
 
@@ -30,6 +35,17 @@ function collision(head, array) {
         }
     }
     return false;
+}
+
+function generateFood() {
+    let newFood;
+    do {
+        newFood = {
+            x: Math.floor(Math.random() * (canvas.width / box)) * box,
+            y: Math.floor(Math.random() * (canvas.height / box)) * box,
+        };
+    } while (collision(newFood, snake));
+    return newFood;
 }
 
 function drawGame() {
@@ -65,10 +81,12 @@ function drawGame() {
     }
 
     if (snakeX === food.x && snakeY === food.y) {
-        food = {
-            x: Math.floor(Math.random() * 20) * box,
-            y: Math.floor(Math.random() * 20) * box,
-        };
+        score++;
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('highScore', highScore);
+        }
+        food = generateFood();
     } else {
         snake.pop();
     }
@@ -78,9 +96,38 @@ function drawGame() {
     if (collision(newHead, snake)) {
         clearInterval(game);
         alert('Game Over!');
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('highScore', highScore);
+        }
+        resetGame();
+        return;
     }
 
     snake.unshift(newHead);
+    scoreDisplay.textContent = `Score: ${score} | High Score: ${highScore} | Level: ${level}`;
+
+    if (score >= targetScore) {
+        level++;
+        targetScore = Math.ceil(targetScore * 1.1) + targetScore; // Increase target score by 110% and round up
+        speed += 30; // Slow down the game pace by 30 ms on each level
+        clearInterval(game);
+        game = setInterval(drawGame, speed);
+    }
 }
 
-let game = setInterval(drawGame, 100);
+function resetGame() {
+    score = 0;
+    level = 1;
+    targetScore = 10;
+    box = 20;
+    canvas.width = 300;
+    canvas.height = 300;
+    speed = 90; // Set initial speed to 90 ms
+    snake = [{ x: 7 * box, y: 7 * box }];
+    direction = "";
+    food = generateFood();
+    game = setInterval(drawGame, speed);
+}
+
+game = setInterval(drawGame, speed);
